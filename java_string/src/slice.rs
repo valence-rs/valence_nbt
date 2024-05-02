@@ -367,7 +367,7 @@ impl JavaStr {
     ///
     /// assert_eq!(s.find('L'), Some(0));
     /// assert_eq!(s.find('é'), Some(14));
-    /// assert_eq!(s.find("pard"), Some(17));
+    /// assert_eq!(s.find("par"), Some(17));
     ///
     /// let x: &[_] = &['1', '2'];
     /// assert_eq!(s.find(x), None);
@@ -735,7 +735,7 @@ impl JavaStr {
     ///
     /// assert_eq!(s.rfind('L'), Some(13));
     /// assert_eq!(s.rfind('é'), Some(14));
-    /// assert_eq!(s.rfind("pard"), Some(24));
+    /// assert_eq!(s.rfind("par"), Some(24));
     ///
     /// let x: &[_] = &['1', '2'];
     /// assert_eq!(s.rfind(x), None);
