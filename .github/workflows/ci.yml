@@ -83,7 +83,7 @@ jobs:
           components: "miri"
 
       - name: Run tests
-        run: MIRIFLAGS='-Zmiri-tree-borrows' cargo miri test --package java_string --workspace --all-features
+        run: MIRIFLAGS='-Zmiri-tree-borrows' cargo miri test --package java_string --all-features
 
   typos:
     name: Typos
