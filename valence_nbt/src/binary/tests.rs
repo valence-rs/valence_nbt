@@ -22,7 +22,7 @@ fn round_trip() {
 #[test]
 fn check_min_sizes() {
     fn check(min_val: Value, expected_size: usize) {
-        /// TAG_Compound + root name + field tag + field name + TAG_End
+        /// `TAG_Compound` + root name + field tag + field name + `TAG_End`
         const COMPOUND_OVERHEAD: usize = 1 + 2 + 1 + 2 + 1;
 
         let dbg = format!("{min_val:?}");
@@ -44,7 +44,7 @@ fn check_min_sizes() {
     check(Value::Float(0.0), 4);
     check(Value::Double(0.0), 8);
     check(Value::ByteArray([].into()), 4);
-    check(Value::String("".into()), 2);
+    check(Value::String(String::new()), 2);
     check(Value::List(Vec::<i32>::new().into()), 5);
     check(Value::Compound(compound!()), 1);
     check(Value::IntArray([].into()), 4);
