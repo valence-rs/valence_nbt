@@ -23,6 +23,7 @@ pub struct JavaString {
     vec: Vec<u8>,
 }
 
+#[allow(clippy::multiple_inherent_impl)]
 impl JavaString {
     #[inline]
     #[must_use]
@@ -121,9 +122,8 @@ impl JavaString {
                         Ok(()) => {
                             unsafe {
                                 // SAFETY: validation succeeded
-                                result
-                                    .push_java_str(JavaStr::from_semi_utf8_unchecked(&v[index..]));
-                            }
+                                result.push_java_str(JavaStr::from_semi_utf8_unchecked(&v[index..]))
+                            };
                             return Cow::Owned(result);
                         }
                         Err(error) => {
@@ -131,8 +131,8 @@ impl JavaString {
                                 // SAFETY: validation succeeded up to this index
                                 result.push_java_str(JavaStr::from_semi_utf8_unchecked(
                                     v.get_unchecked(index..index + error.valid_up_to),
-                                ));
-                            }
+                                ))
+                            };
                             result.push_str(REPLACEMENT);
                             index += error.valid_up_to + error.error_len.unwrap_or(1) as usize;
                         }
@@ -326,9 +326,7 @@ impl JavaString {
     pub fn pop(&mut self) -> Option<JavaCodePoint> {
         let ch = self.chars().next_back()?;
         let newlen = self.len() - ch.len_utf8();
-        unsafe {
-            self.vec.set_len(newlen);
-        }
+        unsafe { self.vec.set_len(newlen) };
         Some(ch)
     }
 
@@ -369,8 +367,8 @@ impl JavaString {
                 self.vec.as_mut_ptr().add(idx),
                 len - next,
             );
-            self.vec.set_len(len - (next - idx));
-        }
+            self.vec.set_len(len - (next - idx))
+        };
         ch
     }
 

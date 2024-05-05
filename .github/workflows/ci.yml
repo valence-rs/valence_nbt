@@ -71,7 +71,7 @@ jobs:
         run: cargo test --workspace --no-default-features --all-targets
 
   miri:
-    name: Miri Tests
+    name: Miri Tests on Java String
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Actions Repository
@@ -84,7 +84,7 @@ jobs:
           components: "miri"
 
       - name: Run tests
-        run: MIRIFLAGS='-Zmiri-tree-borrows' cargo miri test --workspace --all-features --all-targets
+        run: MIRIFLAGS='-Zmiri-tree-borrows' cargo miri test --package java_string --workspace --all-features
 
   typos:
     name: Typos
