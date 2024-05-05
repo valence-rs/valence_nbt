@@ -57,6 +57,72 @@ pub enum ValueMut<'a, S = String> {
     LongArray(&'a mut Vec<i64>),
 }
 
+macro_rules! impl_as {
+    (
+        $name:ident,
+        $($lifetime:lifetime)?,
+        ($($reference:tt)*),
+        ($($deref:tt)?),
+        $ret_reference_name:literal,
+        $as_compound_name:ident,
+        $as_list_name:ident,
+        $as_string_name:ident,
+        $as_byte_array_name:ident -> $byte_array_type:ty,
+        $as_int_array_name:ident -> $int_array_type:ty,
+        $as_long_array_name:ident -> $long_array_type:ty,
+    ) => {
+        impl <$($lifetime,)? S> $name<$($lifetime,)? S> {
+            #[doc = concat!("If this value is a compound, returns the ", $ret_reference_name, "compound")]
+            pub fn $as_compound_name($($reference)* self) -> Option<$($reference)* Compound<S>> {
+                match self {
+                    Self::Compound(compound) => Some($($deref)* compound),
+                    _ => None,
+                }
+            }
+
+            #[doc = concat!("If this value is a list, returns the ", $ret_reference_name, "list")]
+            pub fn $as_list_name($($reference)* self) -> Option<$($reference)* List<S>> {
+                match self {
+                    Self::List(list) => Some($($deref)* list),
+                    _ => None,
+                }
+            }
+
+            #[doc = concat!("If this value is a string, returns the ", $ret_reference_name, "string")]
+            pub fn $as_string_name($($reference)* self) -> Option<$($reference)* S> {
+                match self {
+                    Self::String(str) => Some($($deref)* str),
+                    _ => None,
+                }
+            }
+
+            #[doc = concat!("If this value is a byte array, returns the ", $ret_reference_name, "byte array")]
+            pub fn $as_byte_array_name($($reference)* self) -> Option<$byte_array_type> {
+                match self {
+                    Self::ByteArray(bytes) => Some($($deref)* bytes),
+                    _ => None,
+                }
+            }
+
+            #[doc = concat!("If this value is an int array, returns the ", $ret_reference_name, "int array")]
+            pub fn $as_int_array_name($($reference)* self) -> Option<$int_array_type> {
+                match self {
+                    Self::IntArray(ints) => Some($($deref)* ints),
+                    _ => None,
+                }
+            }
+
+            #[doc = concat!("If this value is a long array, returns the ", $ret_reference_name, "long array")]
+            pub fn $as_long_array_name($($reference)* self) -> Option<$long_array_type> {
+                match self {
+                    Self::LongArray(longs) => Some($($deref)* longs),
+                    _ => None,
+                }
+            }
+        }
+    };
+}
+
 macro_rules! impl_value {
     ($name:ident, $($lifetime:lifetime)?, ($($deref:tt)*), $($reference:tt)*) => {
         macro_rules! as_number {
@@ -134,6 +200,20 @@ macro_rules! impl_value {
                 self.as_i8().map(|v| v != 0)
             }
         }
+
+        impl_as!(
+            $name,
+            $($lifetime)?,
+            (&),
+            (),
+            "reference to the ",
+            as_compound,
+            as_list,
+            as_string,
+            as_byte_array -> &[i8],
+            as_int_array -> &[i32],
+            as_long_array -> &[i64],
+        );
 
         impl <$($lifetime,)? S> From<$($reference)* i8> for $name<$($lifetime,)? S> {
             fn from(v: $($reference)* i8) -> Self {
@@ -246,6 +326,34 @@ impl<S> Value<S> {
     }
 }
 
+impl_as!(
+    Value,
+    ,
+    (),
+    (),
+    "",
+    into_compound,
+    into_list,
+    into_string,
+    into_byte_array -> Vec<i8>,
+    into_int_array -> Vec<i32>,
+    into_long_array -> Vec<i64>,
+);
+
+impl_as!(
+    Value,
+    ,
+    (&mut),
+    (),
+    "mutable reference to the ",
+    as_compound_mut,
+    as_list_mut,
+    as_string_mut,
+    as_byte_array_mut -> &mut Vec<i8>,
+    as_int_array_mut -> &mut Vec<i32>,
+    as_long_array_mut -> &mut Vec<i64>,
+);
+
 impl<S> ValueRef<'_, S>
 where
     S: Clone,
@@ -311,6 +419,20 @@ impl<'a, S> ValueMut<'a, S> {
         }
     }
 }
+
+impl_as!(
+    ValueMut,
+    'a,
+    (&mut),
+    (*),
+    "mutable reference to the ",
+    as_compound_mut,
+    as_list_mut,
+    as_string_mut,
+    as_byte_array_mut -> &mut Vec<i8>,
+    as_int_array_mut -> &mut Vec<i32>,
+    as_long_array_mut -> &mut Vec<i64>,
+);
 
 /// Bools are usually represented as `0` or `1` bytes in NBT.
 impl<S> From<bool> for Value<S> {

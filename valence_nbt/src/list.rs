@@ -506,95 +506,337 @@ impl<S> List<S> {
     }
 }
 
+macro_rules! as_type {
+    (
+        ($($self_reference:tt)*),
+        $ret_reference_name:literal,
+        $empty_list:expr,
+        $as_byte_name:ident -> $byte_list_type:ty,
+        $as_short_name:ident -> $short_list_type:ty,
+        $as_int_name:ident -> $int_list_type:ty,
+        $as_long_name:ident -> $long_list_type:ty,
+        $as_float_name:ident -> $float_list_type:ty,
+        $as_double_name:ident -> $double_list_type:ty,
+        $as_byte_array_name:ident -> $byte_array_list_type:ty,
+        $as_string_name:ident -> $string_list_type:ty,
+        $as_list_name:ident -> $list_list_type:ty,
+        $as_compound_name:ident -> $compound_list_type:ty,
+        $as_int_array_name:ident -> $int_array_list_type:ty,
+        $as_long_array_name:ident -> $long_array_list_type:ty,
+    ) => {
+        #[doc = concat!("If this is a list of bytes, returns the ", $ret_reference_name, "list of bytes.")]
+        pub fn $as_byte_name($($self_reference)* self) -> Option<$byte_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Byte(bytes) => Some(bytes),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of shorts, returns the ", $ret_reference_name, "list of shorts.")]
+        pub fn $as_short_name($($self_reference)* self) -> Option<$short_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Short(shorts) => Some(shorts),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of ints, returns the ", $ret_reference_name, "list of ints.")]
+        pub fn $as_int_name($($self_reference)* self) -> Option<$int_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Int(ints) => Some(ints),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of longs, returns the ", $ret_reference_name, "list of longs.")]
+        pub fn $as_long_name($($self_reference)* self) -> Option<$long_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Long(longs) => Some(longs),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of floats, returns the ", $ret_reference_name, "list of floats.")]
+        pub fn $as_float_name($($self_reference)* self) -> Option<$float_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Float(floats) => Some(floats),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of doubles, returns the ", $ret_reference_name, "list of doubles.")]
+        pub fn $as_double_name($($self_reference)* self) -> Option<$double_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Double(doubles) => Some(doubles),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of byte arrays, returns the ", $ret_reference_name, "list of byte arrays.")]
+        pub fn $as_byte_array_name($($self_reference)* self) -> Option<$byte_array_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::ByteArray(byte_arrays) => Some(byte_arrays),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of strings, returns the ", $ret_reference_name, "list of strings.")]
+        pub fn $as_string_name($($self_reference)* self) -> Option<$string_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::String(strings) => Some(strings),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of lists, returns the ", $ret_reference_name, "list of lists.")]
+        pub fn $as_list_name($($self_reference)* self) -> Option<$list_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::List(lists) => Some(lists),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of compounds, returns the ", $ret_reference_name, "list of compounds.")]
+        pub fn $as_compound_name($($self_reference)* self) -> Option<$compound_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::Compound(compounds) => Some(compounds),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of int arrays, returns the ", $ret_reference_name, "list of int arrays.")]
+        pub fn $as_int_array_name($($self_reference)* self) -> Option<$int_array_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::IntArray(int_arrays) => Some(int_arrays),
+                _ => None,
+            }
+        }
+
+        #[doc = concat!("If this is a list of long arrays, returns the ", $ret_reference_name, "list of long arrays.")]
+        pub fn $as_long_array_name($($self_reference)* self) -> Option<$long_array_list_type> {
+            match self {
+                List::End => Some($empty_list),
+                List::LongArray(long_arrays) => Some(long_arrays),
+                _ => None,
+            }
+        }
+    };
+}
+
+impl<S> List<S> {
+    as_type!(
+        (),
+        "",
+        Vec::new(),
+        into_bytes -> Vec<i8>,
+        into_shorts -> Vec<i16>,
+        into_ints -> Vec<i32>,
+        into_longs -> Vec<i64>,
+        into_floats -> Vec<f32>,
+        into_doubles -> Vec<f64>,
+        into_byte_arrays -> Vec<Vec<i8>>,
+        into_strings -> Vec<S>,
+        into_lists -> Vec<List<S>>,
+        into_compounds -> Vec<Compound<S>>,
+        into_int_arrays -> Vec<Vec<i32>>,
+        into_long_arrays -> Vec<Vec<i64>>,
+    );
+    as_type!(
+        (&),
+        "reference to the ",
+        &[],
+        as_bytes -> &[i8],
+        as_shorts -> &[i16],
+        as_ints -> &[i32],
+        as_longs -> &[i64],
+        as_floats -> &[f32],
+        as_doubles -> &[f64],
+        as_byte_arrays -> &[Vec<i8>],
+        as_strings -> &[S],
+        as_lists -> &[List<S>],
+        as_compounds -> &[Compound<S>],
+        as_int_arrays -> &[Vec<i32>],
+        as_long_arrays -> &[Vec<i64>],
+    );
+    as_type!(
+        (&mut),
+        "mutable reference to the ",
+        &mut [],
+        as_bytes_mut -> &mut [i8],
+        as_shorts_mut -> &mut [i16],
+        as_ints_mut -> &mut [i32],
+        as_longs_mut -> &mut [i64],
+        as_floats_mut -> &mut [f32],
+        as_doubles_mut -> &mut [f64],
+        as_byte_arrays_mut -> &mut [Vec<i8>],
+        as_strings_mut -> &mut [S],
+        as_lists_mut -> &mut [List<S>],
+        as_compounds_mut -> &mut [Compound<S>],
+        as_int_arrays_mut -> &mut [Vec<i32>],
+        as_long_arrays_mut -> &mut [Vec<i64>],
+    );
+}
+
 impl<S> From<Vec<i8>> for List<S> {
     fn from(v: Vec<i8>) -> Self {
-        List::Byte(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Byte(v)
+        }
     }
 }
 
 impl<S> From<Vec<i16>> for List<S> {
     fn from(v: Vec<i16>) -> Self {
-        List::Short(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Short(v)
+        }
     }
 }
 
 impl<S> From<Vec<i32>> for List<S> {
     fn from(v: Vec<i32>) -> Self {
-        List::Int(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Int(v)
+        }
     }
 }
 
 impl<S> From<Vec<i64>> for List<S> {
     fn from(v: Vec<i64>) -> Self {
-        List::Long(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Long(v)
+        }
     }
 }
 
 impl<S> From<Vec<f32>> for List<S> {
     fn from(v: Vec<f32>) -> Self {
-        List::Float(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Float(v)
+        }
     }
 }
 
 impl<S> From<Vec<f64>> for List<S> {
     fn from(v: Vec<f64>) -> Self {
-        List::Double(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Double(v)
+        }
     }
 }
 
 impl<S> From<Vec<Vec<i8>>> for List<S> {
     fn from(v: Vec<Vec<i8>>) -> Self {
-        List::ByteArray(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::ByteArray(v)
+        }
     }
 }
 
 impl From<Vec<String>> for List<String> {
     fn from(v: Vec<String>) -> Self {
-        List::String(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::String(v)
+        }
     }
 }
 
 impl<'a> From<Vec<Cow<'a, str>>> for List<Cow<'a, str>> {
     fn from(v: Vec<Cow<'a, str>>) -> Self {
-        List::String(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::String(v)
+        }
     }
 }
 
 #[cfg(feature = "java_string")]
 impl From<Vec<java_string::JavaString>> for List<java_string::JavaString> {
     fn from(v: Vec<java_string::JavaString>) -> Self {
-        List::String(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::String(v)
+        }
     }
 }
 
 #[cfg(feature = "java_string")]
 impl<'a> From<Vec<Cow<'a, java_string::JavaStr>>> for List<Cow<'a, java_string::JavaStr>> {
     fn from(v: Vec<Cow<'a, java_string::JavaStr>>) -> Self {
-        List::String(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::String(v)
+        }
     }
 }
 
 impl<S> From<Vec<List<S>>> for List<S> {
     fn from(v: Vec<List<S>>) -> Self {
-        List::List(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::List(v)
+        }
     }
 }
 
 impl<S> From<Vec<Compound<S>>> for List<S> {
     fn from(v: Vec<Compound<S>>) -> Self {
-        List::Compound(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::Compound(v)
+        }
     }
 }
 
 impl<S> From<Vec<Vec<i32>>> for List<S> {
     fn from(v: Vec<Vec<i32>>) -> Self {
-        List::IntArray(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::IntArray(v)
+        }
     }
 }
 
 impl<S> From<Vec<Vec<i64>>> for List<S> {
     fn from(v: Vec<Vec<i64>>) -> Self {
-        List::LongArray(v)
+        if v.is_empty() {
+            List::End
+        } else {
+            List::LongArray(v)
+        }
     }
 }
 
