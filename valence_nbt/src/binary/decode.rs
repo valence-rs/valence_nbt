@@ -12,8 +12,9 @@ use crate::{Compound, Error, List, Result, Value};
 /// string). If the root value is of type [`Tag::End`], then `None` is returned.
 /// If the data is malformed or the reader returns an error, then an error is
 /// returned.
-pub fn from_binary<'a, S>(reader: impl ReadBytes<'a>) -> Result<Option<(S, Value<S>)>>
+pub fn from_binary<'a, R, S>(reader: R) -> Result<Option<(S, Value<S>)>>
 where
+    R: ReadBytes<'a>,
     S: FromModifiedUtf8<'a> + Hash + Ord,
 {
     let mut state = DecodeState { reader, depth: 0 };

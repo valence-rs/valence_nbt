@@ -29,6 +29,7 @@ pub struct JavaStr {
     inner: [u8],
 }
 
+#[allow(clippy::multiple_inherent_impl)]
 impl JavaStr {
     /// Converts `v` to a `&JavaStr` if it is fully-valid UTF-8, i.e. UTF-8
     /// without surrogate code points. See [`std::str::from_utf8`].
@@ -1746,8 +1747,8 @@ impl Debug for JavaStr {
             if esc.len() != 1 || c.as_char().is_none() {
                 unsafe {
                     // SAFETY: any invalid UTF-8 should have been caught by a previous iteration
-                    f.write_str(self[from..i].as_str_unchecked())?;
-                }
+                    f.write_str(self[from..i].as_str_unchecked())?
+                };
                 for c in esc {
                     f.write_char(c)?;
                 }
@@ -1756,8 +1757,8 @@ impl Debug for JavaStr {
         }
         unsafe {
             // SAFETY: any invalid UTF-8 should have been caught by the loop above
-            f.write_str(self[from..].as_str_unchecked())?;
-        }
+            f.write_str(self[from..].as_str_unchecked())?
+        };
         f.write_char('"')
     }
 }

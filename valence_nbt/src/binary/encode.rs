@@ -11,12 +11,11 @@ use crate::value::ValueRef;
 use crate::{Compound, Error, List, Result};
 
 /// Encode binary NBT data to the given writer.
-pub fn to_binary<'a, S>(
-    writer: impl Write,
-    root_name: &(impl ToModifiedUtf8 + ?Sized),
-    value: impl Into<ValueRef<'a, S>>,
-) -> Result<()>
+pub fn to_binary<'a, W, R, V, S>(writer: W, root_name: &R, value: V) -> Result<()>
 where
+    W: Write,
+    R: ToModifiedUtf8 + ?Sized,
+    V: Into<ValueRef<'a, S>>,
     S: ToModifiedUtf8 + Hash + Ord + 'a,
 {
     let value = value.into();
