@@ -1,10 +1,11 @@
 use std::borrow::{Borrow, Cow};
 use std::fmt;
+use std::fmt::Formatter;
 use std::hash::Hash;
 use std::iter::FusedIterator;
 use std::ops::{Index, IndexMut};
 
-use crate::Value;
+use crate::{List, Value};
 
 /// A map type with [`String`] keys and [`Value`] values.
 #[derive(Clone, Default)]
@@ -89,44 +90,290 @@ impl<S> Compound<S> {
     }
 }
 
+macro_rules! query_funcs {
+    (
+        $($(#[$attr:meta])* pub fn $func_name:ident <Q>(($($self:tt)+), $key_name:ident: &Q) -> $return_type:ty
+        where $string_type:ty, Q: blah
+        $content:block)*
+    ) => {
+        $(
+            $(#[$attr])* pub fn $func_name<Q>($($self)+, $key_name: &Q) -> $return_type
+            where
+                Q: ?Sized + AsBorrowed<$string_type>,
+                <Q as AsBorrowed<$string_type>>::Borrowed: Hash + Ord,
+                $string_type: Borrow<<Q as AsBorrowed<$string_type>>::Borrowed>,
+            $content
+        )*
+    };
+}
+
 impl<S> Compound<S>
 where
     S: Ord + Hash,
 {
-    pub fn get<Q>(&self, k: &Q) -> Option<&Value<S>>
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        self.map.get(k.as_borrowed())
-    }
+    query_funcs! {
+        pub fn get<Q>((&self), k: &Q) -> Option<&Value<S>>
+        where S, Q: blah
+        {
+            self.map.get(k.as_borrowed())
+        }
 
-    pub fn contains_key<Q>(&self, k: &Q) -> bool
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        self.map.contains_key(k.as_borrowed())
-    }
+        pub fn contains_key<Q>((&self), k: &Q) -> bool
+        where S, Q: blah
+        {
+            self.map.contains_key(k.as_borrowed())
+        }
 
-    pub fn get_mut<Q>(&mut self, k: &Q) -> Option<&mut Value<S>>
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        self.map.get_mut(k.as_borrowed())
-    }
+        pub fn get_mut<Q>((&mut self), k: &Q) -> Option<&mut Value<S>>
+        where S, Q: blah
+        {
+            self.map.get_mut(k.as_borrowed())
+        }
 
-    pub fn get_key_value<Q>(&self, k: &Q) -> Option<(&S, &Value<S>)>
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        self.map.get_key_value(k.as_borrowed())
+        pub fn get_key_value<Q>((&self), k: &Q) -> Option<(&S, &Value<S>)>
+        where S, Q: blah
+        {
+            self.map.get_key_value(k.as_borrowed())
+        }
+
+        pub fn remove<Q>((&mut self), k: &Q) -> Option<Value<S>>
+        where S, Q: blah
+        {
+            #[cfg(feature = "preserve_order")]
+            return self.swap_remove(k);
+            #[cfg(not(feature = "preserve_order"))]
+            return self.map.remove(k.as_borrowed());
+        }
+
+        #[cfg(feature = "preserve_order")]
+        pub fn swap_remove<Q>((&mut self), k: &Q) -> Option<Value<S>>
+        where S, Q: blah
+        {
+            self.map.swap_remove(k.as_borrowed())
+        }
+
+        #[cfg(feature = "preserve_order")]
+        pub fn shift_remove<Q>((&mut self), k: &Q) -> Option<Value<S>>
+        where S, Q: blah
+        {
+            self.map.shift_remove(k.as_borrowed())
+        }
+
+        pub fn get_i8<Q>((&self), k: &Q) -> Option<i8>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_i8())
+        }
+
+        pub fn get_i16<Q>((&self), k: &Q) -> Option<i16>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_i16())
+        }
+
+        pub fn get_i32<Q>((&self), k: &Q) -> Option<i32>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_i32())
+        }
+
+        pub fn get_i64<Q>((&self), k: &Q) -> Option<i64>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_i64())
+        }
+
+        pub fn get_f32<Q>((&self), k: &Q) -> Option<f32>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_f32())
+        }
+
+        pub fn get_f64<Q>((&self), k: &Q) -> Option<f64>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_f64())
+        }
+
+        pub fn get_byte_array<Q>((&self), k: &Q) -> Option<&[i8]>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_byte_array())
+        }
+
+        pub fn get_compound<Q>((&self), k: &Q) -> Option<&Compound<S>>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_compound())
+        }
+
+        pub fn get_list<Q>((&self), k: &Q) -> Option<&List<S>>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_list())
+        }
+
+        pub fn get_string<Q>((&self), k: &Q) -> Option<&S>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_string())
+        }
+
+        pub fn get_int_array<Q>((&self), k: &Q) -> Option<&[i32]>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_int_array())
+        }
+
+        pub fn get_long_array<Q>((&self), k: &Q) -> Option<&[i64]>
+        where S, Q: blah
+        {
+            self.get(k).and_then(|o| o.as_long_array())
+        }
+
+        pub fn get_compound_list<Q>((&self), k: &Q) -> Option<&[Compound<S>]>
+        where S, Q: blah
+        {
+            self.get_list(k).and_then(|l| l.as_compounds())
+        }
+
+        pub fn get_string_list<Q>((&self), k: &Q) -> Option<&[S]>
+        where S, Q: blah
+        {
+            self.get_list(k).and_then(|l| l.as_strings())
+        }
+
+        pub fn get_byte_array_mut<Q>((&mut self), k: &Q) -> Option<&mut Vec<i8>>
+        where S, Q: blah
+        {
+            self.get_mut(k).and_then(|o| o.as_byte_array_mut())
+        }
+
+        pub fn get_compound_mut<Q>((&mut self), k: &Q) -> Option<&mut Compound<S>>
+        where S, Q: blah
+        {
+            self.get_mut(k).and_then(|o| o.as_compound_mut())
+        }
+
+        pub fn get_list_mut<Q>((&mut self), k: &Q) -> Option<&mut List<S>>
+        where S, Q: blah
+        {
+            self.get_mut(k).and_then(|o| o.as_list_mut())
+        }
+
+        pub fn get_string_mut<Q>((&mut self), k: &Q) -> Option<&mut S>
+        where S, Q: blah
+        {
+            self.get_mut(k).and_then(|o| o.as_string_mut())
+        }
+
+        pub fn get_int_array_mut<Q>((&mut self), k: &Q) -> Option<&mut Vec<i32>>
+        where S, Q: blah
+        {
+            self.get_mut(k).and_then(|o| o.as_int_array_mut())
+        }
+
+        pub fn get_long_array_mut<Q>((&mut self), k: &Q) -> Option<&mut Vec<i64>>
+        where S, Q: blah
+        {
+            self.get_mut(k).and_then(|o| o.as_long_array_mut())
+        }
+
+        pub fn get_compound_list_mut<Q>((&mut self), k: &Q) -> Option<&mut [Compound<S>]>
+        where S, Q: blah
+        {
+            self.get_list_mut(k).and_then(|l| l.as_compounds_mut())
+        }
+
+        pub fn get_string_list_mut<Q>((&mut self), k: &Q) -> Option<&mut [S]>
+        where S, Q: blah
+        {
+            self.get_list_mut(k).and_then(|l| l.as_strings_mut())
+        }
+
+        pub fn remove_i8<Q>((&mut self), k: &Q) -> Option<i8>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.as_i8())
+        }
+
+        pub fn remove_i16<Q>((&mut self), k: &Q) -> Option<i16>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.as_i16())
+        }
+
+        pub fn remove_i32<Q>((&mut self), k: &Q) -> Option<i32>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.as_i32())
+        }
+
+        pub fn remove_i64<Q>((&mut self), k: &Q) -> Option<i64>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.as_i64())
+        }
+
+        pub fn remove_f32<Q>((&mut self), k: &Q) -> Option<f32>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.as_f32())
+        }
+
+        pub fn remove_f64<Q>((&mut self), k: &Q) -> Option<f64>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.as_f64())
+        }
+
+        pub fn remove_byte_array<Q>((&mut self), k: &Q) -> Option<Vec<i8>>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.into_byte_array())
+        }
+
+        pub fn remove_compound<Q>((&mut self), k: &Q) -> Option<Compound<S>>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.into_compound())
+        }
+
+        pub fn remove_list<Q>((&mut self), k: &Q) -> Option<List<S>>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.into_list())
+        }
+
+        pub fn remove_string<Q>((&mut self), k: &Q) -> Option<S>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.into_string())
+        }
+
+        pub fn remove_int_array<Q>((&mut self), k: &Q) -> Option<Vec<i32>>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.into_int_array())
+        }
+
+        pub fn remove_long_array<Q>((&mut self), k: &Q) -> Option<Vec<i64>>
+        where S, Q: blah
+        {
+            self.remove(k).and_then(|o| o.into_long_array())
+        }
+
+        pub fn remove_compound_list<Q>((&mut self), k: &Q) -> Option<Vec<Compound<S>>>
+        where S, Q: blah
+        {
+            self.remove_list(k).and_then(|l| l.into_compounds())
+        }
+
+        pub fn remove_string_list<Q>((&mut self), k: &Q) -> Option<Vec<S>>
+        where S, Q: blah
+        {
+            self.remove_list(k).and_then(|l| l.into_strings())
+        }
     }
 
     pub fn insert<K, V>(&mut self, k: K, v: V) -> Option<Value<S>>
@@ -135,38 +382,6 @@ where
         V: Into<Value<S>>,
     {
         self.map.insert(k.into(), v.into())
-    }
-
-    pub fn remove<Q>(&mut self, k: &Q) -> Option<Value<S>>
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        #[cfg(feature = "preserve_order")]
-        return self.swap_remove(k);
-        #[cfg(not(feature = "preserve_order"))]
-        return self.map.remove(k.as_borrowed());
-    }
-
-    #[cfg(feature = "preserve_order")]
-    pub fn swap_remove<Q>(&mut self, k: &Q) -> Option<Value<S>>
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        self.map.swap_remove(k.as_borrowed())
-    }
-
-    #[cfg(feature = "preserve_order")]
-    pub fn shift_remove<Q>(&mut self, k: &Q) -> Option<Value<S>>
-    where
-        Q: ?Sized + AsBorrowed<S>,
-        <Q as AsBorrowed<S>>::Borrowed: Hash + Ord,
-        S: Borrow<<Q as AsBorrowed<S>>::Borrowed>,
-    {
-        self.map.shift_remove(k.as_borrowed())
     }
 
     pub fn remove_entry<Q>(&mut self, k: &Q) -> Option<(S, Value<S>)>
@@ -221,6 +436,170 @@ where
         match self.map.entry(k.into()) {
             EntryImpl::Vacant(ve) => Entry::Vacant(VacantEntry { entry: ve }),
             EntryImpl::Occupied(oe) => Entry::Occupied(OccupiedEntry { entry: oe }),
+        }
+    }
+
+    pub fn compound_entry<K>(&mut self, k: K) -> CompoundEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => CompoundEntry::Vacant(VacantCompoundEntry::new(ve)),
+            EntryImpl::Occupied(oe) if oe.get().as_compound().is_some() => {
+                // SAFETY: we just verified that the entry is a compound
+                CompoundEntry::Occupied(unsafe { OccupiedCompoundEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => CompoundEntry::WrongType(WrongTypeCompoundEntry::new(oe)),
+        }
+    }
+
+    pub fn list_entry<K>(&mut self, k: K) -> ListEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => ListEntry::Vacant(VacantListEntry::new(ve)),
+            EntryImpl::Occupied(oe) if oe.get().as_list().is_some() => {
+                // SAFETY: we just verified that the entry is a list
+                ListEntry::Occupied(unsafe { OccupiedListEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => ListEntry::WrongType(WrongTypeListEntry::new(oe)),
+        }
+    }
+
+    pub fn string_entry<K>(&mut self, k: K) -> StringEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => StringEntry::Vacant(VacantStringEntry::new(ve)),
+            EntryImpl::Occupied(oe) if oe.get().as_string().is_some() => {
+                // SAFETY: we just verified that the entry is a string
+                StringEntry::Occupied(unsafe { OccupiedStringEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => StringEntry::WrongType(WrongTypeStringEntry::new(oe)),
+        }
+    }
+
+    pub fn byte_array_entry<K>(&mut self, k: K) -> ByteArrayEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => ByteArrayEntry::Vacant(VacantByteArrayEntry::new(ve)),
+            EntryImpl::Occupied(oe) if oe.get().as_byte_array().is_some() => {
+                // SAFETY: we just verified that the entry is a byte array
+                ByteArrayEntry::Occupied(unsafe { OccupiedByteArrayEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => ByteArrayEntry::WrongType(WrongTypeByteArrayEntry::new(oe)),
+        }
+    }
+
+    pub fn int_array_entry<K>(&mut self, k: K) -> IntArrayEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => IntArrayEntry::Vacant(VacantIntArrayEntry::new(ve)),
+            EntryImpl::Occupied(oe) if oe.get().as_int_array().is_some() => {
+                // SAFETY: we just verified that the entry is an int array
+                IntArrayEntry::Occupied(unsafe { OccupiedIntArrayEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => IntArrayEntry::WrongType(WrongTypeIntArrayEntry::new(oe)),
+        }
+    }
+
+    pub fn long_array_entry<K>(&mut self, k: K) -> LongArrayEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => LongArrayEntry::Vacant(VacantLongArrayEntry::new(ve)),
+            EntryImpl::Occupied(oe) if oe.get().as_long_array().is_some() => {
+                // SAFETY: we just verified that the entry is a long array
+                LongArrayEntry::Occupied(unsafe { OccupiedLongArrayEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => LongArrayEntry::WrongType(WrongTypeLongArrayEntry::new(oe)),
+        }
+    }
+
+    pub fn compound_list_entry<K>(&mut self, k: K) -> CompoundListEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => CompoundListEntry::Vacant(VacantCompoundListEntry::new(ve)),
+            EntryImpl::Occupied(oe) if matches!(oe.get(), Value::List(List::Compound(_))) => {
+                // SAFETY: we just verified that the entry is a compound list (and not List::End)
+                CompoundListEntry::Occupied(unsafe { OccupiedCompoundListEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => {
+                CompoundListEntry::WrongType(WrongTypeCompoundListEntry::new(oe))
+            }
+        }
+    }
+
+    pub fn string_list_entry<K>(&mut self, k: K) -> StringListEntry<S>
+    where
+        K: Into<S>,
+    {
+        #[cfg(not(feature = "preserve_order"))]
+        use std::collections::btree_map::Entry as EntryImpl;
+
+        #[cfg(feature = "preserve_order")]
+        use indexmap::map::Entry as EntryImpl;
+
+        match self.map.entry(k.into()) {
+            EntryImpl::Vacant(ve) => StringListEntry::Vacant(VacantStringListEntry::new(ve)),
+            EntryImpl::Occupied(oe) if matches!(oe.get(), Value::List(List::String(_))) => {
+                // SAFETY: we just verified that the entry is a string list (and not List::End)
+                StringListEntry::Occupied(unsafe { OccupiedStringListEntry::new(oe) })
+            }
+            EntryImpl::Occupied(oe) => {
+                StringListEntry::WrongType(WrongTypeStringListEntry::new(oe))
+            }
         }
     }
 
@@ -555,6 +934,426 @@ where
             .finish()
     }
 }
+
+macro_rules! typed_entry {
+    (
+        $name:ident,
+        $vacant_name:ident,
+        $wrong_type_name:ident,
+        $occupied_name:ident,
+        ($($expected_type:tt)+),
+        ($($expected_type_immutable:tt)+),
+        $downcast:expr,
+        $downcast_mut:expr,
+        $downcast_owned:expr,
+        $upcast:expr,
+    ) => {
+        pub enum $name<'a, S = String> {
+            Vacant($vacant_name<'a, S>),
+            WrongType($wrong_type_name<'a, S>),
+            Occupied($occupied_name<'a, S>),
+        }
+
+        impl<'a, S> $name<'a, S>
+        where
+            S: Hash + Ord,
+        {
+            pub fn key(&self) -> &S {
+                match self {
+                    $name::Vacant(ve) => ve.key(),
+                    $name::WrongType(wte) => wte.key(),
+                    $name::Occupied(oe) => oe.key(),
+                }
+            }
+
+            pub fn or_insert<V: Into<$($expected_type)+>>(self, default: V) -> &'a mut $($expected_type)+ {
+                match self {
+                    $name::Vacant(ve) => ve.insert(default),
+                    $name::WrongType(wte) => wte.insert(default),
+                    $name::Occupied(oe) => oe.into_mut(),
+                }
+            }
+
+            pub fn or_insert_with<F, V>(self, default: F) -> &'a mut $($expected_type)+
+            where
+                F: FnOnce() -> V,
+                V: Into<$($expected_type)+>,
+            {
+                match self {
+                    $name::Vacant(ve) => ve.insert(default()),
+                    $name::WrongType(wte) => wte.insert(default()),
+                    $name::Occupied(oe) => oe.into_mut(),
+                }
+            }
+
+            pub fn or_default(self) -> &'a mut $($expected_type)+
+            where
+                S: Default
+            {
+                self.or_insert_with::<_, $($expected_type)+>(Default::default)
+            }
+
+            pub fn and_modify<F>(self, f: F) -> Self
+            where
+                F: FnOnce(&mut $($expected_type)+),
+            {
+                match self {
+                    $name::Occupied(mut oe) => {
+                        f(oe.get_mut());
+                        $name::Occupied(oe)
+                    }
+                    _ => self,
+                }
+            }
+        }
+
+        impl<S> fmt::Debug for $name<'_, S>
+        where
+            S: fmt::Debug + Ord,
+        {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    Self::Vacant(entry) => f.debug_tuple("Vacant").field(entry).finish(),
+                    Self::WrongType(entry) => f.debug_tuple("WrongType").field(entry).finish(),
+                    Self::Occupied(entry) => f.debug_tuple("Occupied").field(entry).finish(),
+                }
+            }
+        }
+
+        pub struct $vacant_name<'a, S = String> {
+            #[cfg(not(feature = "preserve_order"))]
+            entry: std::collections::btree_map::VacantEntry<'a, S, Value<S>>,
+            #[cfg(feature = "preserve_order")]
+            entry: indexmap::map::VacantEntry<'a, S, Value<S>>,
+        }
+
+        impl<'a, S> $vacant_name<'a, S>
+        where
+            S: Ord + Hash,
+        {
+            #[cfg(not(feature = "preserve_order"))]
+            fn new(entry: std::collections::btree_map::VacantEntry<'a, S, Value<S>>) -> Self {
+                Self {
+                    entry,
+                }
+            }
+
+            #[cfg(feature = "preserve_order")]
+            fn new(entry: indexmap::map::VacantEntry<'a, S, Value<S>>) -> Self {
+                Self {
+                    entry,
+                }
+            }
+
+            pub fn key(&self) -> &S {
+                self.entry.key()
+            }
+
+            pub fn insert<V: Into<$($expected_type)+>>(self, v: V) -> &'a mut $($expected_type)+{
+                let downcasted = $downcast_mut(self.entry.insert($upcast(v.into())));
+                // SAFETY: we just inserted a value of the corresponding type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+        }
+
+        impl<S> fmt::Debug for $vacant_name<'_, S>
+        where
+            S: fmt::Debug + Ord,
+        {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct(stringify!($vacant_name))
+                    .field("entry", &self.entry)
+                    .finish()
+            }
+        }
+
+        pub struct $wrong_type_name<'a, S = String> {
+            #[cfg(not(feature = "preserve_order"))]
+            entry: std::collections::btree_map::OccupiedEntry<'a, S, Value<S>>,
+            #[cfg(feature = "preserve_order")]
+            entry: indexmap::map::OccupiedEntry<'a, S, Value<S>>,
+        }
+
+        impl<'a, S> $wrong_type_name<'a, S>
+        where
+            S: Ord + Hash,
+        {
+            #[cfg(not(feature = "preserve_order"))]
+            fn new(entry: std::collections::btree_map::OccupiedEntry<'a, S, Value<S>>) -> Self {
+                Self {
+                    entry,
+                }
+            }
+
+            #[cfg(feature = "preserve_order")]
+            fn new(entry: indexmap::map::OccupiedEntry<'a, S, Value<S>>) -> Self {
+                Self {
+                    entry,
+                }
+            }
+
+            pub fn key(&self) -> &S {
+                self.entry.key()
+            }
+
+            pub fn get(&self) -> &Value<S> {
+                self.entry.get()
+            }
+
+            pub fn get_mut(&mut self) -> &mut Value<S> {
+                self.entry.get_mut()
+            }
+
+            pub fn insert_value<V: Into<Value<S>>>(&mut self, v: V) -> Value<S> {
+                self.entry.insert(v.into())
+            }
+
+            pub fn insert<V: Into<$($expected_type)+>>(mut self, v: V) -> &'a mut $($expected_type)+ {
+                self.entry.insert($upcast(v.into()));
+                let downcasted = $downcast_mut(self.entry.into_mut());
+                // SAFETY: we just inserted a value of the corresponding type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            pub fn remove(self) -> Value<S> {
+                #[cfg(feature = "preserve_order")]
+                return self.entry.swap_remove();
+                #[cfg(not(feature = "preserve_order"))]
+                return self.entry.remove();
+            }
+
+            #[cfg(feature = "preserve_order")]
+            pub fn swap_remove(self) -> Value<S> {
+                self.entry.swap_remove()
+            }
+
+            #[cfg(feature = "preserve_order")]
+            pub fn shift_remove(self) -> Value<S> {
+                self.entry.shift_remove()
+            }
+        }
+
+        impl<S> fmt::Debug for $wrong_type_name<'_, S>
+        where
+            S: fmt::Debug + Ord
+        {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct(stringify!($wrong_type_name))
+                    .field("entry", &self.entry)
+                    .finish()
+            }
+        }
+
+        pub struct $occupied_name<'a, S = String> {
+            #[cfg(not(feature = "preserve_order"))]
+            entry: std::collections::btree_map::OccupiedEntry<'a, S, Value<S>>,
+            #[cfg(feature = "preserve_order")]
+            entry: indexmap::map::OccupiedEntry<'a, S, Value<S>>,
+        }
+
+        impl<'a, S> $occupied_name<'a, S>
+        where
+            S: Hash + Ord,
+        {
+            /// # Safety
+            /// The input entry must contain the expected type of this struct
+            #[cfg(not(feature = "preserve_order"))]
+            unsafe fn new(entry: std::collections::btree_map::OccupiedEntry<'a, S, Value<S>>) -> Self {
+                Self {
+                    entry,
+                }
+            }
+
+            /// # Safety
+            /// The input entry must contain the expected type of this struct
+            #[cfg(feature = "preserve_order")]
+            unsafe fn new(entry: indexmap::map::OccupiedEntry<'a, S, Value<S>>) -> Self {
+                Self {
+                    entry,
+                }
+            }
+
+            pub fn key(&self) -> &S {
+                self.entry.key()
+            }
+
+            pub fn get(&self) -> &$($expected_type_immutable)+ {
+                let downcasted = $downcast(self.entry.get());
+                // SAFETY: invariant of this struct is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            pub fn get_mut(&mut self) -> &mut $($expected_type)+ {
+                let downcasted = $downcast_mut(self.entry.get_mut());
+                // SAFETY: invariant of this struct is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            pub fn into_mut(self) -> &'a mut $($expected_type)+ {
+                let downcasted = $downcast_mut(self.entry.into_mut());
+                // SAFETY: invariant of this struct is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            pub fn insert<V: Into<$($expected_type)+>>(&mut self, v: V) -> $($expected_type)+ {
+                let downcasted = $downcast_owned(self.entry.insert($upcast(v.into())));
+                // SAFETY: invariant of this type is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            pub fn remove(self) -> $($expected_type)+ {
+                #[cfg(feature = "preserve_order")]
+                let downcasted = $downcast_owned(self.entry.swap_remove());
+                #[cfg(not(feature = "preserve_order"))]
+                let downcasted = $downcast_owned(self.entry.remove());
+                // SAFETY: invariant of this type is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            #[cfg(feature = "preserve_order")]
+            pub fn swap_remove(self) -> $($expected_type)+ {
+                let downcasted = $downcast_owned(self.entry.swap_remove());
+                // SAFETY: invariant of this type is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+
+            #[cfg(feature = "preserve_order")]
+            pub fn shift_remove(self) -> $($expected_type)+ {
+                let downcasted = $downcast_owned(self.entry.shift_remove());
+                // SAFETY: invariant of this type is that the value is of the expected type
+                unsafe { downcasted.unwrap_unchecked() }
+            }
+        }
+
+        impl<S> fmt::Debug for $occupied_name<'_, S>
+        where
+            S: fmt::Debug + Ord,
+        {
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.debug_struct(stringify!($occupied_name))
+                    .field("entry", &self.entry)
+                    .finish()
+            }
+        }
+    };
+}
+
+typed_entry!(
+    CompoundEntry,
+    VacantCompoundEntry,
+    WrongTypeCompoundEntry,
+    OccupiedCompoundEntry,
+    (Compound<S>),
+    (Compound<S>),
+    Value::as_compound,
+    Value::as_compound_mut,
+    Value::into_compound,
+    Value::Compound,
+);
+typed_entry!(
+    ListEntry,
+    VacantListEntry,
+    WrongTypeListEntry,
+    OccupiedListEntry,
+    (List<S>),
+    (List<S>),
+    Value::as_list,
+    Value::as_list_mut,
+    Value::into_list,
+    Value::List,
+);
+typed_entry!(
+    StringEntry,
+    VacantStringEntry,
+    WrongTypeStringEntry,
+    OccupiedStringEntry,
+    (S),
+    (S),
+    Value::as_string,
+    Value::as_string_mut,
+    Value::into_string,
+    Value::String,
+);
+typed_entry!(
+    ByteArrayEntry,
+    VacantByteArrayEntry,
+    WrongTypeByteArrayEntry,
+    OccupiedByteArrayEntry,
+    (Vec<i8>),
+    ([i8]),
+    Value::as_byte_array,
+    Value::as_byte_array_mut,
+    Value::into_byte_array,
+    Value::ByteArray,
+);
+typed_entry!(
+    IntArrayEntry,
+    VacantIntArrayEntry,
+    WrongTypeIntArrayEntry,
+    OccupiedIntArrayEntry,
+    (Vec<i32>),
+    ([i32]),
+    Value::as_int_array,
+    Value::as_int_array_mut,
+    Value::into_int_array,
+    Value::IntArray,
+);
+typed_entry!(
+    LongArrayEntry,
+    VacantLongArrayEntry,
+    WrongTypeLongArrayEntry,
+    OccupiedLongArrayEntry,
+    (Vec<i64>),
+    ([i64]),
+    Value::as_long_array,
+    Value::as_long_array_mut,
+    Value::into_long_array,
+    Value::LongArray,
+);
+
+fn downcast_compound_list<S>(v: &Value<S>) -> Option<&[Compound<S>]> {
+    v.as_list().and_then(|o| o.as_compounds())
+}
+fn downcast_compound_list_mut<S>(v: &mut Value<S>) -> Option<&mut Vec<Compound<S>>> {
+    match v {
+        Value::List(List::Compound(list)) => Some(list),
+        _ => None,
+    }
+}
+typed_entry!(
+    CompoundListEntry,
+    VacantCompoundListEntry,
+    WrongTypeCompoundListEntry,
+    OccupiedCompoundListEntry,
+    (Vec<Compound<S>>),
+    ([Compound<S>]),
+    downcast_compound_list,
+    downcast_compound_list_mut,
+    |v: Value<S>| v.into_list().and_then(|o| o.into_compounds()),
+    |v| Value::List(List::Compound(v)),
+);
+
+fn downcast_string_list<S>(v: &Value<S>) -> Option<&[S]> {
+    v.as_list().and_then(|o| o.as_strings())
+}
+fn downcast_string_list_mut<S>(v: &mut Value<S>) -> Option<&mut Vec<S>> {
+    match v {
+        Value::List(List::String(list)) => Some(list),
+        _ => None,
+    }
+}
+typed_entry!(
+    StringListEntry,
+    VacantStringListEntry,
+    WrongTypeStringListEntry,
+    OccupiedStringListEntry,
+    (Vec<S>),
+    ([S]),
+    downcast_string_list,
+    downcast_string_list_mut,
+    |v: Value<S>| v.into_list().and_then(|o| o.into_strings()),
+    |v| Value::List(List::String(v)),
+);
 
 impl<S, Q> Index<&'_ Q> for Compound<S>
 where
